@@ -20,6 +20,10 @@ Add the following to your `Podfile` and run `pod update`:
 pod 'RNKeychain', :path => 'node_modules/react-native-keychain'
 ```
 
+### Option: With [rnpm](https://github.com/rnpm/rnpm)
+
+`$ rnpm link`
+
 ## Usage
 
 See `KeychainExample` for fully working project example.
@@ -37,12 +41,16 @@ Keychain
     console.log('Credentials saved successfully!');
   });
 
+// service argument optional
 Keychain
   .getGenericPassword()
   .then(function(credentials) {
     console.log('Credentials successfully loaded for user ' + credentials.username);
+  }).catch(function(error) {
+    console.log('Keychain couldn\'t be accessed! Maybe no value set?', error);
   });
 
+// service argument optional
 Keychain
   .resetGenericPassword()
   .then(function() {
@@ -71,12 +79,67 @@ Keychain
 
 ```
 
+### Android
+
+* Note: Android support requires React Native 0.19 or later
+* on Android, the `setInternetCredentials(server, username, password)` call will be resolved as call to `setGenericPassword(username, password, server)` and the data will be saved in `SharedPreferences`, encrypted using Facebook conceal. Use the `server` argument to distinguish between multiple entries.
+
+* Edit `android/settings.gradle` to look like this (without the +):
+
+  ```diff
+  rootProject.name = 'MyApp'
+
+  include ':app'
+
+  + include ':react-native-keychain'
+  + project(':react-native-keychain').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-keychain/android')
+  ```
+
+* Edit `android/app/build.gradle` (note: **app** folder) to look like this: 
+
+  ```diff
+  apply plugin: 'com.android.application'
+
+  android {
+    ...
+  }
+
+  dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'com.android.support:appcompat-v7:23.0.1'
+    compile 'com.facebook.react:react-native:0.19.+'
+  + compile project(':react-native-keychain')
+  }
+  ```
+
+* Edit your `MainActivity.java` (deep in `android/app/src/main/java/...`) to look like this (note **two** places to edit):
+
+  ```diff
+  package com.myapp;
+
+  + import com.oblador.keychain.KeychainPackage;
+
+  ....
+
+  public class MainActivity extends extends ReactActivity {
+
+    @Override
+    protected List<ReactPackage> getPackages() {
+        return Arrays.<ReactPackage>asList(
+                new MainReactPackage(),
+  +             new KeychainPackage()
+        );
+    }
+    ...
+  }
+  ```
+
 ## Todo
 
 - [x] iOS support
-- [ ] Android support
+- [x] Android support
 - [ ] Storing objects as JSON
 - [ ] Expose wider selection of underlying native APIs
 
 ## License
-MIT © Joel Arvidsson 2015
+MIT © Joel Arvidsson 2016
