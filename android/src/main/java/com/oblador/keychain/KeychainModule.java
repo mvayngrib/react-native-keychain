@@ -54,18 +54,15 @@ public class KeychainModule extends ReactContextBaseJavaModule {
         service = service == null ? "" : service;
         //Log.d("Crypto", service + username + password);
 
-        Entity userentity = Entity.create(KEYCHAIN_DATA + ":" + service + "user");
-        Entity pwentity = Entity.create(KEYCHAIN_DATA + ":" + service + "pass");
+        Entity pwentity = Entity.create(getEntityID(service, username));
 
         try {
-            String encryptedUsername = encryptWithEntity(username, userentity, callback);
             String encryptedPassword = encryptWithEntity(password, pwentity, callback);
 
             SharedPreferences.Editor prefsEditor = prefs.edit();
-            prefsEditor.putString(service + ":u", encryptedUsername);
-            prefsEditor.putString(service + ":p", encryptedPassword);
+            prefsEditor.putString(getPrefKey(service, username), encryptedPassword);
             prefsEditor.apply();
-            Log.d("KeychainModule saved: ", service + encryptedUsername + ":" + encryptedPassword);
+            Log.d("KeychainModule saved: ", getPrefKey(service, username));
             callback.invoke("", "KeychainModule saved the data");
         } catch (Exception e) {
             Log.e("KeychainModule ", e.getLocalizedMessage());
@@ -85,31 +82,24 @@ public class KeychainModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void getGenericPasswordForService(String service, Callback callback) {
+    public void getGenericPasswordForService(String service, String username, Callback callback) {
         service = service == null ? "" : service;
 
-        String username = prefs.getString(service + ":u", "user_not_found");
-        String password = prefs.getString(service + ":p", "pass_not_found");
-        if (username.equals("user_not_found") || password.equals("pass_not_found")) {
+        String encryptedPassword = prefs.getString(getPrefKey(service, username), "pass_not_found");
+        if (encryptedPassword.equals("pass_not_found")) {
             Log.e("KeychainModule ", "no keychain entry found for service: " + service);
             callback.invoke("no keychain entry found for service: " + service);
             return;
         }
 
-        Log.d("KeychainModule ", "will attempt to decrypt for " + service + username + ":" + password);
+        Log.d("KeychainModule ", "will attempt to decrypt for " + service + username + ":" + encryptedPassword);
 
-        byte[] recuser = Base64.decode(username, Base64.DEFAULT);
-        byte[] recpass = Base64.decode(password, Base64.DEFAULT);
-
-
-        Entity userentity = Entity.create(KEYCHAIN_DATA + ":" + service + "user");
-        Entity pwentity = Entity.create(KEYCHAIN_DATA + ":" + service + "pass");
+        Entity pwentity = Entity.create(getEntityID(service, username));
+        byte[] recpass = Base64.decode(encryptedPassword, Base64.DEFAULT);
 
         try {
-            byte[] decryptedUsername = crypto.decrypt(recuser, userentity);
             byte[] decryptedPass = crypto.decrypt(recpass, pwentity);
-
-            callback.invoke("", new String(decryptedUsername, StandardCharsets.UTF_8), new String(decryptedPass, StandardCharsets.UTF_8));
+            callback.invoke("", new String(decryptedPass, StandardCharsets.UTF_8));
         } catch (Exception e) {
             Log.e("KeychainModule ", e.getLocalizedMessage());
             callback.invoke(e.getLocalizedMessage());
@@ -117,13 +107,12 @@ public class KeychainModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void resetGenericPasswordForService(String service, Callback callback) {
+    public void resetGenericPasswordForService(String service, String username, Callback callback) {
         service = service == null ? "" : service;
 
         try {
             SharedPreferences.Editor prefsEditor = prefs.edit();
-            prefsEditor.remove(service + ":u");
-            prefsEditor.remove(service + ":p");
+            prefsEditor.remove(getPrefKey(service, username));
             prefsEditor.apply();
             callback.invoke("", "KeychainModule password was reset");
         } catch (Exception e) {
@@ -138,14 +127,20 @@ public class KeychainModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void getInternetCredentialsForServer(@NonNull String server, Callback callback) {
-        getGenericPasswordForService(server, callback);
+    public void getInternetCredentialsForServer(String server, @NonNull String username, Callback callback) {
+        getGenericPasswordForService(server, username, callback);
     }
 
     @ReactMethod
-    public void resetInternetCredentialsForServer(@NonNull String server, Callback callback) {
-        resetGenericPasswordForService(server, callback);
+    public void resetInternetCredentialsForServer(String server, @NonNull String username, Callback callback) {
+        resetGenericPasswordForService(server, username, callback);
     }
 
+    private static String getEntityID (String service, String username) {
+        return KEYCHAIN_DATA + ":" + service + ":" + username;
+    }
 
+    private static String getPrefKey (String service, String username) {
+        return service + ":" + username;
+    }
 }
