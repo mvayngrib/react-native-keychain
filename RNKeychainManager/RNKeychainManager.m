@@ -8,9 +8,9 @@
 
 #import <Security/Security.h>
 #import "RNKeychainManager.h"
-#import "RCTConvert.h"
-#import "RCTBridge.h"
-#import "RCTUtils.h"
+#import <React/RCTConvert.h>
+#import <React/RCTBridge.h>
+#import <React/RCTUtils.h>
 
 @implementation RNKeychainManager
 
@@ -216,7 +216,7 @@ RCT_EXPORT_METHOD(resetInternetCredentialsForServer:(NSString*)server callback:(
   if (service == nil) {
     service = [[NSBundle mainBundle] bundleIdentifier];
   }
-  
+
   // Create dictionary of search parameters
   NSMutableDictionary* dict = [NSMutableDictionary dictionaryWithDictionary: @{
     (__bridge id)kSecClass:(__bridge id)(kSecClassGenericPassword),
@@ -228,7 +228,7 @@ RCT_EXPORT_METHOD(resetInternetCredentialsForServer:(NSString*)server callback:(
   if (username != nil) {
     [dict setObject:username forKey:(__bridge id)kSecAttrAccount];
   }
-  
+
   // Remove any old values from the keychain
   return SecItemDelete((__bridge CFDictionaryRef) dict);
 }
